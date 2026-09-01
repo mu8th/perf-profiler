@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perf Profiler Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Perf Profiler — Real-time Dashboard</h1>
+        <div id="status-indicator">Connected</div>
+    </header>
+
+    <main>
+        <section id="flame-graph-section">
+            <h2>Flame Graph</h2>
+            <canvas id="flame-graph" width="800" height="400"></canvas>
+        </section>
+
+        <section id="hot-paths-section">
+            <h2>Hot Paths</h2>
+            <table id="hot-paths-table">
+                <thead>
+                    <tr>
+                        <th>Function</th>
+                        <th>Avg CPU Time</th>
+                        <th>Call Count</th>
+                        <th>% of Total</th>
+                    </tr>
+                </thead>
+                <tbody id="hot-paths-body"></tbody>
+            </table>
+        </section>
+
+        <section id="memory-trend-section">
+            <h2>Memory Allocation Trend</h2>
+            <canvas id="memory-chart" width="800" height="300"></canvas>
+        </section>
+
+        <section id="live-metrics-section">
+            <h2>Live Metrics</h2>
+            <div id="metrics-display"></div>
+        </section>
+    </main>
+
+    <!-- Dashboard rendering logic in frontend/dashboard.py -->
+</body>
+</html>
