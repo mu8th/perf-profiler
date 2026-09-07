@@ -2,17 +2,28 @@
 
 'use strict';
 
+// Escape values before they reach innerHTML. Function names come from
+// whatever code was instrumented, so treat them as text, not markup.
+function esc(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 /**
- * Fetch profile data from REST API and render flame graph canvas.
+ * Fetch profile data from the REST API and render the flame graph canvas.
  */
 async function fetchProfilesAndRender() {
     const response = await fetch('/api/profiles');
+    if (!response.ok) return;
     const profilesData = await response.json();
     renderFlameGraph(profilesData);
 }
 
 /**
- * Render flame graph canvas from profile data.
+ * Render flame graph bars from profile data, widest (most CPU) on top.
  * @param {Array} profiles - List of function call profiles with CPU time values.
  */
 function renderFlameGraph(profiles) {
@@ -28,36 +39,36 @@ function renderFlameGraph(profiles) {
     const totalCPU = profiles.reduce((sum, p) => sum + p.cpu_time, 0);
     const sortedProfiles = [...profiles].sort((a, b) => b.cpu_time - a.cpu_time);
 
-    ctx.fillStyle = '#4f46e5';
-    let yPosition = 380;
-
+    let yPosition = 40;
     for (const profile of sortedProfiles) {
-        const width = (profile.cpu_time / totalCPU) * canvas.width;
-        ctx.fillRect(10, yPosition - 20, width, 20);
-        ctx.fillStyle = '#1a1a2e';
-        ctx.fillText(profile.function_name, 15, yPosition - 10);
-        yPosition -= 25;
+        const width = Math.max(2, (profile.cpu_time / totalCPU) * canvas.width);
+        ctx.fillStyle = '#4f46e5';
+        ctx.fillRect(10, yPosition, width, 20);
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText(profile.function_name, 15, yPosition + 14);
+        yPosition += 28;
     }
 }
 
 /**
- * Fetch hot path data from REST API and render table.
+ * Fetch hot path data from the REST API and render the table.
  */
 async function fetchHotPathsAndRender() {
     const response = await fetch('/api/hot_paths');
+    if (!response.ok) return;
     const hotPathsData = await response.json();
     renderHotPathsTable(hotPathsData);
 }
 
 /**
- * Render hot paths table from detected data.
+ * Render the hot paths table, most expensive function first.
  * @param {Array} hotPaths - List of detected hot path entries.
  */
 function renderHotPathsTable(hotPaths) {
     const tbody = document.getElementById('hot-paths-body');
 
     if (!hotPaths || hotPaths.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4">No hot paths detected</td></tr>';
+        tbody.innerHTML = '<tr class="row-empty"><td colspan="4">No hot paths detected.</td></tr>';
         return;
     }
 
@@ -65,23 +76,26 @@ function renderHotPathsTable(hotPaths) {
 
     let html = '';
     for (const hp of sortedHotPaths) {
-        html += `<tr><td>${hp.function_name}</td><td>${hp.avg_cpu_time}s</td><td>${hp.call_count}</td><td>${hp.percentage_of_total}%</td></tr>`;
+        html += `<tr><td>${esc(hp.function_name)}</td><td>${hp.avg_cpu_time}s</td><td>${esc(hp.call_count)}</td><td>${hp.percentage_of_total}%</td></tr>`;
     }
 
     tbody.innerHTML = html;
 }
 
 /**
- * Fetch memory snapshot data from REST API and render chart.
+ * Fetch memory snapshot data from the REST API and render the trend chart.
  */
 async function fetchMemorySnapshotsAndRender() {
     const response = await fetch('/api/memory_snapshots');
+    if (!response.ok) return;
     const memoryData = await response.json();
     renderMemoryChart(memoryData);
 }
 
 /**
- * Render memory trend canvas from snapshot data.
+ * Render the memory trend line from snapshot data.
+ * Points are spaced evenly along the x axis; y is scaled against the largest
+ * current allocation in the series so growth and drops stay visible.
  * @param {Array} snapshots - List of memory allocation snapshots with timestamps.
  */
 function renderMemoryChart(snapshots) {
@@ -94,33 +108,35 @@ function renderMemoryChart(snapshots) {
         return;
     }
 
-    const sortedSnapshots = [...snapshots].sort((a, b) => a.timestamp - b.timestamp);
+    const sortedSnapshots = [...snapshots].sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+    const maxBytes = Math.max(...sortedSnapshots.map(s => s.current_bytes), 1);
+    const stepX = snapshots.length > 1 ? (canvas.width - 20) / (snapshots.length - 1) : 0;
 
     ctx.strokeStyle = '#4f46e5';
     ctx.lineWidth = 2;
     ctx.beginPath();
 
-    let firstPoint = true;
-    for (const snapshot of sortedSnapshots) {
-        const x = ((snapshot.timestamp % 3600) / 3600 * canvas.width);
-        const y = (snapshot.current_bytes / Math.max(1, snapshot.peak_bytes)) * canvas.height;
-
-        if (firstPoint) {
+    sortedSnapshots.forEach((snapshot, i) => {
+        const x = 10 + i * stepX;
+        const y = canvas.height - (snapshot.current_bytes / maxBytes) * (canvas.height - 20);
+        if (i === 0) {
             ctx.moveTo(x, y);
-            firstPoint = false;
         } else {
             ctx.lineTo(x, y);
         }
-    }
+    });
 
     ctx.stroke();
 }
 
 /**
- * Connect to WebSocket for real-time metric streaming.
+ * Connect to the WebSocket for real-time metric streaming.
  */
 function connectWebSocket() {
-    const wsUrl = 'ws://localhost:8000/ws/metrics';
+    // Derive the socket URL from the page origin so the dashboard works
+    // whatever host and port the server is bound to.
+    const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const wsUrl = `${protocol}${location.host}/ws/metrics`;
     let websocket;
 
     try {
@@ -136,7 +152,7 @@ function connectWebSocket() {
         };
 
         websocket.onerror = () => {
-            document.getElementById('status-indicator').textContent = 'Disconnected';
+            document.getElementById('status-indicator').textContent = 'Error';
         };
 
         websocket.onclose = () => {
@@ -149,14 +165,15 @@ function connectWebSocket() {
 }
 
 /**
- * Update live metrics display panel.
+ * Update the live metrics display panel. The "CPU: Xs" and "Memory: Y bytes"
+ * format is parsed by the presentation layer in index.html, so keep it stable.
  * @param {Object} data - Current metric values dictionary.
  */
 function updateMetricsDisplay(data) {
     const display = document.getElementById('metrics-display');
 
-    const cpuSpan = `<span>CPU: ${data.cpu_time || 0}s</span>`;
-    const memorySpan = `<span>Memory: ${data.memory_bytes || 0} bytes</span>`;
+    const cpuSpan = `<span>CPU: ${esc(data.cpu_time || 0)}s</span>`;
+    const memorySpan = `<span>Memory: ${esc(data.memory_bytes || 0)} bytes</span>`;
 
     display.innerHTML = `${cpuSpan}${memorySpan}`;
 }

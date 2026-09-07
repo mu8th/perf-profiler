@@ -2,79 +2,132 @@
 
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from sqlalchemy import create_engine
+from fastapi import FastAPI, WebSocket
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from starlette.websockets import WebSocketDisconnect
 
-engine = create_engine("sqlite:///perf_profiler.db")
+from .database import init_db
+from .services import storage
 
-
-app = FastAPI(title="Perf Profiler", description="Real-time performance profiling service")
-
-
-@app.on_event("startup")
-async def initialize_database() -> None:
-    """Initialize SQLite database and SQLAlchemy tables on startup."""
-    from models import Base
-    Base.metadata.create_all(engine)
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+TICK_INTERVAL_SECONDS = 2.0
 
 
-@app.on_event("shutdown")
-async def shutdown_profiler() -> None:
-    """Stop memory tracking and flush profiler data to database on shutdown."""
+class ProfilePayload(BaseModel):
+    """Body for POST /api/profiles."""
+
+    function_name: str
+    cpu_time: float
+    duration: float
+    call_count: int
+    memory_peak_bytes: int | None = None
 
 
-def create_app() -> FastAPI:
-    """Create and configure the application. Returns configured instance."""
-    return app
+class MemorySnapshotPayload(BaseModel):
+    """Body for POST /api/memory_snapshots."""
+
+    current_bytes: int
+    peak_bytes: int
+    allocation_count: int
 
 
-@app.get("/profiles")
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> Any:
+    """Initialize the database when the app starts."""
+    init_db()
+    yield
+
+
+app = FastAPI(title="Perf Profiler", description="Real-time performance profiling service", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    """Report service status."""
+    return {"status": "ok"}
+
+
+@app.get("/api/profiles")
 async def get_profiles() -> list[dict[str, Any]]:
-    """Retrieve all collected profile entries from database."""
-    return []
+    """Return all stored profile entries, oldest first."""
+    return storage.get_profiles()
 
 
-@app.get("/profiles/{function_name}")
-async def get_profile(function_name: str) -> dict[str, Any]:
-    """Retrieve aggregated profile for a specific function."""
-    return {}
+@app.post("/api/profiles")
+async def submit_profile(payload: ProfilePayload) -> dict[str, Any]:
+    """Store an aggregated profile entry.
+
+    Args:
+        payload: Aggregated metrics for one instrumented function.
+
+    Returns:
+        Confirmation with the stored row id.
+    """
+    entry_id = storage.record_profile_entry(
+        function_name=payload.function_name,
+        cpu_time=payload.cpu_time,
+        duration=payload.duration,
+        call_count=payload.call_count,
+        memory_peak_bytes=payload.memory_peak_bytes,
+    )
+    return {"status": "stored", "id": entry_id}
 
 
-@app.post("/profiles")
-async def submit_profile(data: dict[str, Any]) -> dict[str, Any]:
-    """Accept and store a new profile entry in database. Returns confirmation."""
-    return {"status": "accepted"}
-
-
-@app.get("/hot_paths")
+@app.get("/api/hot_paths")
 async def get_hot_paths() -> list[dict[str, Any]]:
-    """Retrieve detected hot paths ranked by CPU time percentage."""
-    return []
+    """Return hot paths ranked by share of total recorded CPU time."""
+    return storage.get_hot_paths()
 
 
-@app.get("/memory_snapshots")
+@app.get("/api/memory_snapshots")
 async def get_memory_snapshots() -> list[dict[str, Any]]:
-    """Retrieve memory allocation trend snapshots from database."""
-    return []
+    """Return all stored memory snapshots, oldest first."""
+    return storage.get_memory_snapshots()
+
+
+@app.post("/api/memory_snapshots")
+async def submit_memory_snapshot(payload: MemorySnapshotPayload) -> dict[str, Any]:
+    """Store a memory snapshot.
+
+    Args:
+        payload: Traced memory figures from one point in time.
+
+    Returns:
+        Confirmation with the stored row id.
+    """
+    snapshot_id = storage.record_memory_snapshot(
+        current_bytes=payload.current_bytes,
+        peak_bytes=payload.peak_bytes,
+        allocation_count=payload.allocation_count,
+    )
+    return {"status": "stored", "id": snapshot_id}
 
 
 @app.websocket("/ws/metrics")
 async def metrics_websocket(websocket: WebSocket) -> None:
-    """WebSocket endpoint for streaming real-time metrics.
+    """Stream live metric summaries to the dashboard.
 
-    Clients connect to receive live profile data updates.
+    Each connection receives a summary of all stored metrics every few
+    seconds, straight from the database. Clients only listen; they never send.
+    The summary is fetched in a worker thread so the blocking database call
+    does not stall the event loop.
     """
     await websocket.accept()
-    try:
-        while True:
-            await websocket.receive_json()
-            await websocket.send_json({"status": "received"})
-    except WebSocketDisconnect:
-        pass
+    while True:
+        try:
+            summary = await asyncio.to_thread(storage.latest_summary)
+            await websocket.send_json({"type": "tick", **summary})
+        except (WebSocketDisconnect, RuntimeError):
+            # The client disconnected or the socket already closed; stop.
+            break
+        await asyncio.sleep(TICK_INTERVAL_SECONDS)
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Serve the dashboard after all API routes are registered.
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

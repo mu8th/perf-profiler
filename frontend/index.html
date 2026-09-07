@@ -3,47 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perf Profiler Dashboard</title>
+    <title>Perf Profiler — Real-time Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <h1>Perf Profiler — Real-time Dashboard</h1>
-        <div id="status-indicator">Connected</div>
-    </header>
+    <div id="app">
+        <!-- ── Terminal chrome header ─────────────────── -->
+        <header class="term-chrome">
+            <div class="term-dots">
+                <span class="term-dot" style="background:#ef4444"></span>
+                <span class="term-dot" style="background:#eab308"></span>
+                <span class="term-dot" style="background:#22c55e"></span>
+            </div>
+            <div class="term-title">perf-profiler &nbsp;/&nbsp; real-time metrics</div>
+            <div class="term-state">
+                <div id="status-indicator" class="badge badge-idle"><span class="badge-dot"></span> connecting</div>
+            </div>
+        </header>
 
-    <main>
-        <section id="flame-graph-section">
-            <h2>Flame Graph</h2>
-            <canvas id="flame-graph" width="800" height="400"></canvas>
-        </section>
+        <!-- ── Page head ──────────────────────────────── -->
+        <div class="page-head">
+            <span class="ghost-num">02</span>
+            <div class="head-border">
+                <p class="kicker">mu8th / developer tooling</p>
+                <h1 class="page-title">Perf <span class="grad">Profiler</span></h1>
+                <p class="page-sub">[ live instrumentation &middot; flame graphs &middot; hot-path detection ]</p>
+            </div>
+        </div>
 
-        <section id="hot-paths-section">
-            <h2>Hot Paths</h2>
-            <table id="hot-paths-table">
-                <thead>
-                    <tr>
-                        <th>Function</th>
-                        <th>Avg CPU Time</th>
-                        <th>Call Count</th>
-                        <th>% of Total</th>
-                    </tr>
-                </thead>
-                <tbody id="hot-paths-body"></tbody>
-            </table>
-        </section>
+        <!-- ── Big live metric stats (count-up) ───────── -->
+        <div class="stats-row">
+            <div class="glow-card stat reveal">
+                <div class="stat-value"><span class="stat-num" id="stat-cpu" data-count="0">0</span><span class="stat-suffix">s</span></div>
+                <div class="stat-label">CPU Time</div>
+            </div>
+            <div class="glow-card stat reveal">
+                <div class="stat-value"><span class="stat-num" id="stat-mem" data-count="0">0</span><span class="stat-suffix">KB</span></div>
+                <div class="stat-label">Memory Allocated</div>
+            </div>
+            <div class="glow-card stat reveal">
+                <div class="stat-value"><span class="stat-num" id="stat-calls" data-count="0">0</span></div>
+                <div class="stat-label">Function Calls</div>
+            </div>
+            <div class="glow-card stat reveal">
+                <div class="stat-value"><span class="stat-num" id="stat-latency" data-count="0">0</span><span class="stat-suffix">ms</span></div>
+                <div class="stat-label">Avg Latency</div>
+            </div>
+        </div>
 
-        <section id="memory-trend-section">
-            <h2>Memory Allocation Trend</h2>
-            <canvas id="memory-chart" width="800" height="300"></canvas>
-        </section>
+        <main>
+            <!-- ── Flame graph ────────────────────────── -->
+            <section id="flame-graph-section" class="glow-card panel reveal span-2">
+                <div class="panel-head">
+                    <span class="panel-kicker">[ flame graph ]</span>
+                    <h2 class="panel-title">Flame Graph</h2>
+                    <span class="panel-tag">cpu time by call</span>
+                </div>
+                <div class="canvas-wrap">
+                    <canvas id="flame-graph" width="800" height="400"></canvas>
+                </div>
+            </section>
 
-        <section id="live-metrics-section">
-            <h2>Live Metrics</h2>
-            <div id="metrics-display"></div>
-        </section>
-    </main>
+            <!-- ── Hot paths ──────────────────────────── -->
+            <section id="hot-paths-section" class="glow-card panel reveal">
+                <div class="panel-head">
+                    <span class="panel-kicker">[ hot paths ]</span>
+                    <h2 class="panel-title">Hot Paths</h2>
+                    <span class="panel-tag">ranked by cpu share</span>
+                </div>
+                <div class="table-wrap">
+                    <table id="hot-paths-table">
+                        <thead>
+                            <tr>
+                                <th>Function</th>
+                                <th>Avg CPU Time</th>
+                                <th>Call Count</th>
+                                <th>% of Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hot-paths-body">
+                            <tr class="row-empty"><td colspan="4">No hot paths detected.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
-    <!-- Dashboard rendering logic in frontend/dashboard.py -->
+            <!-- ── Memory trend ───────────────────────── -->
+            <section id="memory-trend-section" class="glow-card panel reveal">
+                <div class="panel-head">
+                    <span class="panel-kicker">[ memory ]</span>
+                    <h2 class="panel-title">Memory Allocation Trend</h2>
+                    <span class="panel-tag">bytes over time</span>
+                </div>
+                <div class="canvas-wrap">
+                    <canvas id="memory-chart" width="800" height="300"></canvas>
+                </div>
+            </section>
+
+            <!-- ── Live metrics ───────────────────────── -->
+            <section id="live-metrics-section" class="glow-card panel reveal">
+                <div class="panel-head">
+                    <span class="panel-kicker">[ live ]</span>
+                    <h2 class="panel-title">Live Metrics</h2>
+                    <span class="panel-tag">websocket stream</span>
+                </div>
+                <div id="metrics-display" class="metrics">
+                    <div class="metric-empty">Awaiting live stream&hellip;</div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="foot">
+            <span class="mono">perf-profiler</span> &middot; real-time performance observability
+        </footer>
+    </div>
+
+    <!-- Data + rendering layer (REST + WebSocket). Served alongside index.html. -->
+    <script src="dashboard.js"></script>
+    <script>
+    // ── Presentation layer only (dashboard.js is untouched) ──
+    document.querySelectorAll('.glow-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = e.clientX - r.left - r.width / 2;
+        const y = e.clientY - r.top - r.height / 2;
+        card.style.setProperty('--cursor-angle', (Math.atan2(y, x) * 180 / Math.PI) + 'deg');
+      });
+    });
+
+    const revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add('visible'); revealObserver.unobserve(entry.target); }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // Status badge states (dashboard.js sets textContent; we recolor it here)
+    const statusEl = document.getElementById('status-indicator');
+    function paintStatus(text) {
+      const t = (text || '').toLowerCase();
+      statusEl.classList.remove('badge-live', 'badge-idle', 'badge-down');
+      if (t === 'connected') statusEl.classList.add('badge-live');
+      else if (t === 'disconnected' || t === 'error') statusEl.classList.add('badge-down');
+      else statusEl.classList.add('badge-idle');
+    }
+    // Observe text set by dashboard.js websocket handlers
+    new MutationObserver(() => paintStatus(statusEl.textContent)).observe(statusEl, { childList: true, characterData: true, subtree: true });
+
+    // Count-up for big stat numbers
+    function animateTo(el, target, suffix, decimals) {
+      const dur = 1200, start = performance.now();
+      const tick = now => {
+        const p = Math.min((now - start) / dur, 1);
+        const val = target * (1 - Math.pow(1 - p, 3));
+        el.textContent = decimals ? val.toFixed(decimals) : Math.round(val).toLocaleString();
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+    document.querySelectorAll('.stat-num[data-count]').forEach(el => {
+      const so = new IntersectionObserver(es => {
+        es.forEach(en => { if (en.isIntersecting) { animateTo(el, parseFloat(el.dataset.count) || 0, '', 0); so.unobserve(el); } });
+      }, { threshold: 0.4 });
+      so.observe(el);
+    });
+
+    // Sync big live stat numbers with the WebSocket stream written into #metrics-display
+    const display = document.getElementById('metrics-display');
+    function syncLiveMetrics() {
+      const txt = display.textContent;
+      const cpu = txt.match(/CPU:\s*([\d.]+)\s*s/i);
+      const mem = txt.match(/Memory:\s*([\d.]+)\s*bytes/i);
+      if (cpu) { const el = document.getElementById('stat-cpu'); animateTo(el, parseFloat(cpu[1]), 's', cpu[1].includes('.') ? 3 : 1); }
+      if (mem) { const el = document.getElementById('stat-mem'); animateTo(el, parseFloat(mem[1]) / 1024, 'KB', 0); }
+      display.querySelector('.metric-empty')?.remove();
+    }
+    new MutationObserver(() => syncLiveMetrics()).observe(display, { childList: true, characterData: true, subtree: true });
+    </script>
 </body>
 </html>

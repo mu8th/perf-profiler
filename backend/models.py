@@ -3,29 +3,36 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, Text
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import DateTime, Float, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """Declarative base class for all Perf Profiler models."""
+
+
+def _utcnow() -> datetime.datetime:
+    """Return the current timezone-aware UTC timestamp."""
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 class ProfileEntry(Base):
-    """Database record for a single function call profile."""
+    """Database record for one instrumented function's aggregated profile."""
 
     __tablename__ = "profile_entries"
 
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
-    function_name: str = Column(String(255), nullable=False, index=True)
-    cpu_time: float = Column(Float, nullable=False)
-    duration: float = Column(Float, nullable=False)
-    call_count: int = Column(Integer, nullable=False)
-    timestamp: datetime.datetime = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
-    memory_peak_bytes: int = Column(Integer, nullable=True)
-    metadata: str = Column(Text, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    function_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    cpu_time: Mapped[float] = mapped_column(Float, nullable=False)
+    duration: Mapped[float] = mapped_column(Float, nullable=False)
+    call_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    timestamp: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    memory_peak_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize entry as JSON-compatible dictionary."""
+        """Serialize entry as a JSON-compatible dictionary."""
         return {
             "id": self.id,
             "function_name": self.function_name,
@@ -37,43 +44,19 @@ class ProfileEntry(Base):
         }
 
 
-class HotPath(Base):
-    """Database record for detected hot paths."""
-
-    __tablename__ = "hot_paths"
-
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
-    function_name: str = Column(String(255), nullable=False, index=True)
-    avg_cpu_time: float = Column(Float, nullable=False)
-    call_count: int = Column(Integer, nullable=False)
-    percentage_of_total: float = Column(Float, nullable=False)
-    detected_at: datetime.datetime = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize hot path entry as JSON-compatible dictionary."""
-        return {
-            "id": self.id,
-            "function_name": self.function_name,
-            "avg_cpu_time": self.avg_cpu_time,
-            "call_count": self.call_count,
-            "percentage_of_total": self.percentage_of_total,
-            "detected_at": self.detected_at.isoformat(),
-        }
-
-
 class MemorySnapshot(Base):
-    """Database record for memory allocation snapshots."""
+    """Database record for a process memory allocation snapshot."""
 
     __tablename__ = "memory_snapshots"
 
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp: datetime.datetime = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
-    current_bytes: int = Column(Integer, nullable=False)
-    peak_bytes: int = Column(Integer, nullable=False)
-    allocation_count: int = Column(Integer, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    current_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    peak_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    allocation_count: Mapped[int] = mapped_column(Integer, nullable=False)
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize memory snapshot as JSON-compatible dictionary."""
+        """Serialize snapshot as a JSON-compatible dictionary."""
         return {
             "id": self.id,
             "timestamp": self.timestamp.isoformat(),
@@ -81,6 +64,3 @@ class MemorySnapshot(Base):
             "peak_bytes": self.peak_bytes,
             "allocation_count": self.allocation_count,
         }
-
-
-from typing import Any

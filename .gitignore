@@ -6,9 +6,19 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 develop/
+
+# Databases
+*.db
+*.sqlite3
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
 
 # Docker
 .docker/
