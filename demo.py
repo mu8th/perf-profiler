@@ -85,7 +85,9 @@ def post_json(url: str, payload: dict) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", default="http://127.0.0.1:8000", help="Base URL of the running server")
+    parser.add_argument(
+        "--url", default="http://127.0.0.1:8000", help="Base URL of the running server"
+    )
     args = parser.parse_args()
 
     # Warm up each function a few times so the aggregates mean something.
@@ -93,7 +95,7 @@ def main() -> int:
         fibonacci(24)
     for i in range(50):
         fast_lookup(f"key-{i}")
-    for i in range(20):
+    for _ in range(20):
         leaky_loader(64 * 1024)
 
     # Map the library's aggregate fields onto the API's field names.

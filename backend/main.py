@@ -44,7 +44,11 @@ async def lifespan(_: FastAPI) -> Any:
     yield
 
 
-app = FastAPI(title="Perf Profiler", description="Real-time performance profiling service", lifespan=lifespan)
+app = FastAPI(
+    title="Perf Profiler",
+    description="Real-time performance profiling service",
+    lifespan=lifespan,
+)
 
 
 @app.get("/health")

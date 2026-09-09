@@ -5,9 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
+from fastapi.testclient import TestClient
+
 from backend import database
 from backend.main import app
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture()
@@ -54,8 +55,10 @@ def test_profile_payload_validation(client: TestClient) -> None:
 
 def test_hot_paths_ranking_and_percentages(client: TestClient) -> None:
     """Verify hot paths rank by CPU share and percentages sum to ~100."""
-    client.post("/api/profiles", json={"function_name": "hot", "cpu_time": 3.0, "duration": 3.0, "call_count": 3})
-    client.post("/api/profiles", json={"function_name": "cold", "cpu_time": 1.0, "duration": 1.0, "call_count": 1})
+    hot_payload = {"function_name": "hot", "cpu_time": 3.0, "duration": 3.0, "call_count": 3}
+    cold_payload = {"function_name": "cold", "cpu_time": 1.0, "duration": 1.0, "call_count": 1}
+    client.post("/api/profiles", json=hot_payload)
+    client.post("/api/profiles", json=cold_payload)
 
     hot_paths = client.get("/api/hot_paths").json()
     assert [hp["function_name"] for hp in hot_paths] == ["hot", "cold"]

@@ -15,7 +15,7 @@ class Base(DeclarativeBase):
 
 def _utcnow() -> datetime.datetime:
     """Return the current timezone-aware UTC timestamp."""
-    return datetime.datetime.now(datetime.timezone.utc)
+    return datetime.datetime.now(datetime.UTC)
 
 
 class ProfileEntry(Base):
@@ -28,7 +28,9 @@ class ProfileEntry(Base):
     cpu_time: Mapped[float] = mapped_column(Float, nullable=False)
     duration: Mapped[float] = mapped_column(Float, nullable=False)
     call_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    timestamp: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    timestamp: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
     memory_peak_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
@@ -50,7 +52,9 @@ class MemorySnapshot(Base):
     __tablename__ = "memory_snapshots"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    timestamp: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    timestamp: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
     current_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     peak_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     allocation_count: Mapped[int] = mapped_column(Integer, nullable=False)

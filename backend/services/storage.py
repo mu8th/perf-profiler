@@ -49,7 +49,8 @@ def get_profiles() -> list[dict[str, Any]]:
         Serialized ProfileEntry dictionaries.
     """
     with get_session() as session:
-        rows = session.execute(select(ProfileEntry).order_by(ProfileEntry.timestamp)).scalars().all()
+        stmt = select(ProfileEntry).order_by(ProfileEntry.timestamp)
+        rows = session.execute(stmt).scalars().all()
         return [row.to_dict() for row in rows]
 
 
@@ -136,8 +137,10 @@ def latest_summary() -> dict[str, Any]:
         and total call_count across all stored entries.
     """
     with get_session() as session:
-        cpu = session.execute(select(func.coalesce(func.sum(ProfileEntry.cpu_time), 0.0))).scalar_one()
-        calls = session.execute(select(func.coalesce(func.sum(ProfileEntry.call_count), 0))).scalar_one()
+        cpu_stmt = select(func.coalesce(func.sum(ProfileEntry.cpu_time), 0.0))
+        calls_stmt = select(func.coalesce(func.sum(ProfileEntry.call_count), 0))
+        cpu = session.execute(cpu_stmt).scalar_one()
+        calls = session.execute(calls_stmt).scalar_one()
         memory = session.execute(
             select(func.coalesce(func.max(MemorySnapshot.current_bytes), 0))
         ).scalar_one()
