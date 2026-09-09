@@ -37,6 +37,13 @@ def test_profile_decorator_multiple_calls() -> None:
 
     @profile
     def repeated_function(n: int) -> int:
+        # Do enough work that each call far exceeds clock granularity, so the
+        # wall-duration >= CPU-time invariant holds on every platform (the
+        # process_time and perf_counter clocks can disagree at microsecond
+        # scale on virtualized CI runners).
+        total = 0
+        for i in range(200_000):
+            total += i
         return n * 2
 
     for value in (10, 20, 30):

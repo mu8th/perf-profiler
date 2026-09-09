@@ -1,4 +1,4 @@
-"""Perf Profiler — decorator-based instrumentation library.
+"""Perf Profiler: a decorator-based instrumentation library.
 
 Instruments Python functions with per-call CPU time, wall-clock duration,
 and net memory growth. The library is stdlib-only so it can be imported
