@@ -1,4 +1,4 @@
-"""Tests for the Perf Profiler decorator library."""
+"""Tests for the Performance Profiler decorator library."""
 
 from __future__ import annotations
 

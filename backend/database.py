@@ -1,4 +1,4 @@
-"""Database initialization and session management for Perf Profiler.
+"""Database initialization and session management for the performance profiler.
 
 The default store is a local SQLite file at the repository root. Set the
 ``DATABASE_URL`` environment variable to point at another database, for

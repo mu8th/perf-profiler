@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for Perf Profiler."""
+"""SQLAlchemy ORM models for the performance profiler."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """Declarative base class for all Perf Profiler models."""
+    """Declarative base class for all performance profiler models."""
 
 
 def _utcnow() -> datetime.datetime:

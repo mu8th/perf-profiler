@@ -1,1 +1,1 @@
-"""pytest suite for Perf Profiler."""
+"""pytest suite for the Performance Profiler."""

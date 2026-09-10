@@ -1,4 +1,4 @@
-// Perf Profiler Dashboard, real-time metrics visualization via REST/WebSocket.
+// Performance Profiler dashboard, real-time metrics visualization via REST/WebSocket.
 
 'use strict';
 

@@ -1,1 +1,1 @@
-﻿"""Perf Profiler backend package."""
+﻿"""Performance profiler backend package."""

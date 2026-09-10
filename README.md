@@ -1,4 +1,4 @@
-# Perf Profiler
+# Performance Profiler
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)]

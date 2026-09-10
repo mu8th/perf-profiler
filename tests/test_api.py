@@ -1,4 +1,4 @@
-"""API tests for the Perf Profiler FastAPI service."""
+"""API tests for the Performance Profiler FastAPI service."""
 
 from __future__ import annotations
 
@@ -102,4 +102,4 @@ def test_dashboard_served_at_root(client: TestClient) -> None:
     """Verify the frontend is served at the root path."""
     response = client.get("/")
     assert response.status_code == 200
-    assert "Perf Profiler" in response.text
+    assert "Performance Profiler" in response.text

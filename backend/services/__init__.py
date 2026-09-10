@@ -1,1 +1,1 @@
-"""Service layer for Perf Profiler."""
+"""Service layer for the performance profiler."""

@@ -1,4 +1,4 @@
-"""FastAPI entry point for Perf Profiler."""
+"""FastAPI entry point for the performance profiler."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ async def lifespan(_: FastAPI) -> Any:
 
 
 app = FastAPI(
-    title="Perf Profiler",
+    title="Performance Profiler",
     description="Real-time performance profiling service",
     lifespan=lifespan,
 )
