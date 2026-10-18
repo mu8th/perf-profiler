@@ -4,6 +4,9 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)]
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-green.svg)]
 
+**[Try the live demo →](https://muath.online/#project-profile)** Profile a slow order
+report with this decorator, apply the fix for the hottest function, and measure again.
+
 A lightweight profiling tool for Python functions. Decorate a function with
 `@profile` and it records CPU time, wall-clock duration, call counts, and net
 memory growth per call. A FastAPI service stores the results and streams live
